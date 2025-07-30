@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Geeks Shop</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    form {
+      margin-bottom: 30px;
+    }
+
+    .product-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .product-card {
+      width: 250px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .product-image-main {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-bottom: 1px solid #ddd;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .product-thumbnails {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin: 5px 0 10px;
+    }
+
+    .product-thumbnail {
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border: 2px solid transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    .product-thumbnail.active {
+      border-color: #007bff;
+    }
+
+    .product-details {
+      padding: 15px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .product-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .product-price {
+      color: #28a745;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .product-description {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+      flex-grow: 1;
+    }
+
+    .product-button {
+      display: inline-block;
+      background-color: #007bff;
+      color: white;
+      padding: 8px 12px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      user-select: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .product-button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🛒 Каталог товаров Geeks</h1>
+
+  <div id="currency-rates" style="font-size: 1.2em; margin: 10px 0;">
+    💱 Курс валют: Загрузка...
+  </div>
+
+  <script>
+    async function fetchCurrencyRates() {
+      const element = document.getElementById('currency-rates');
+      try {
+        const response = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+
+        const usdToRub = data.rates.RUB;
+        const eurToRub = data.rates.EUR ? data.rates.EUR * usdToRub : 'N/A';
+
+        element.textContent = `💱 Курс валют: USD: ${usdToRub.toFixed(2)} ₽, EUR: ${eurToRub === 'N/A' ? eurToRub : eurToRub.toFixed(2)} ₽`;
+      } catch (error) {
+        element.textContent = 'Ошибка загрузки курса валют.';
+      }
+    }
+
+    fetchCurrencyRates();
+  </script>
+
+  <!-- 🔍 Форма фильтра -->
+  <form method="get">
+    {{ product_filter.form.as_p }}
+    <button type="submit">Поиск</button>
+  </form>
+
+  <!-- 🖼 Карточки товаров -->
+  <div class="product-container">
+    {% for product in product_filter.qs %}
+    <div class="product-card" data-product-id="{{ product.id }}">
+      <!-- Главное изображение -->
+      <img class="product-image-main" 
+           src="{% if product.images.all.exists %}{{ product.images.first.image.url }}{% else %}https://via.placeholder.com/250x200?text=Нет+изображения{% endif %}" 
+           alt="{{ product.title }}">
+
+      <!-- Миниатюры -->
+      <div class="product-thumbnails">
+        {% if product.images.all.exists %}
+          {% for img in product.images.all %}
+            <img src="{{ img.image.url }}" class="product-thumbnail {% if forloop.first %}active{% endif %}" alt="Фото {{ forloop.counter }}" data-product-id="{{ product.id }}">
+          {% endfor %}
+        {% else %}
+          <img src="https://via.placeholder.com/40x40?text=Нет" class="product-thumbnail active" alt="Нет изображений">
+        {% endif %}
+      </div>
+
+      <div class="product-details">
+        <div class="product-title">{{ product.title }}</div>
+        <div class="product-price">{{ product.price }} сом</div>
+        <div class="product-description">{{ product.description|truncatewords:15 }}</div>
+
+        <button class="product-button" onclick="addToCart({{ product.id }})">Купить</button>
+      </div>
+    </div>
+    {% empty %}
+      <p>Товары не найдены.</p>
+    {% endfor %}
+  </div>
+
+  <script>
+    // Переключение изображений в карточках товаров
+    document.querySelectorAll('.product-card').forEach(card => {
+      const mainImg = card.querySelector('.product-image-main');
+      const thumbnails = card.querySelectorAll('.product-thumbnail');
+
+      thumbnails.forEach(thumb => {
+        thumb.addEventListener('click', () => {
+          mainImg.src = thumb.src;
+          thumbnails.forEach(t => t.classList.remove('active'));
+          thumb.classList.add('active');
+        });
+      });
+    });
+
+    // Функция добавления в корзину (пример)
+    function addToCart(productId) {
+      alert(`Товар с ID ${productId} добавлен в корзину (эмуляция)`);
+    }
+  </script>
+</body>
+</html>

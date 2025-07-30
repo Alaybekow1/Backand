@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>{{ product.title }} | Geeks Shop</title>
+  <style>
+    .product-image-main {
+      max-width: 400px;
+      max-height: 400px;
+      object-fit: contain;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: block;
+    }
+    .thumbnails {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .thumbnail {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border: 2px solid transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    .thumbnail.active {
+      border-color: #007bff;
+    }
+  </style>
+</head>
+<body>
+
+<h1>{{ product.title }}</h1>
+
+<!-- Основное изображение -->
+<img id="mainImage" class="product-image-main" 
+     src="{% if product.images.all.exists %}{{ product.images.first.image.url }}{% else %}{{ product.image.url }}{% endif %}" 
+     alt="{{ product.title }}">
+
+<!-- Миниатюры -->
+<div class="thumbnails">
+  {% if product.images.all.exists %}
+    {% for img in product.images.all %}
+      <img src="{{ img.image.url }}" alt="Фото {{ forloop.counter }}" 
+           class="thumbnail {% if forloop.first %}active{% endif %}" 
+           onclick="switchImage(this)">
+    {% endfor %}
+  {% else %}
+    <img src="{{ product.image.url }}" alt="{{ product.title }}" class="thumbnail active" onclick="switchImage(this)">
+  {% endif %}
+</div>
+
+<script>
+  function switchImage(el) {
+    const mainImage = document.getElementById('mainImage');
+    mainImage.src = el.src;
+    document.querySelectorAll('.thumbnail').forEach(img => img.classList.remove('active'));
+    el.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
